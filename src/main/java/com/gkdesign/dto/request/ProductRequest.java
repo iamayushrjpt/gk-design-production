@@ -1,5 +1,6 @@
 package com.gkdesign.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.gkdesign.model.Product;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -50,8 +51,15 @@ public class ProductRequest {
     private List<Product.CustomizationOption> customizationOptions;
 
     private Product.ProductStatus status;
+    @JsonProperty("isLuxury")
     private boolean isLuxury;
+
+    @JsonProperty("isFeatured")
     private boolean isFeatured;
+
+    @JsonProperty("isBestSeller")
     private boolean isBestSeller;
+
+    @JsonProperty("isNewArrival")
     private boolean isNewArrival;
 }

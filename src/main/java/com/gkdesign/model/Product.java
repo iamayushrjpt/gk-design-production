@@ -1,5 +1,6 @@
 package com.gkdesign.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -58,9 +59,16 @@ public class Product {
     /** published | draft | hidden | hold | archived */
     private ProductStatus status;
 
+    @JsonProperty("isLuxury")
     private boolean isLuxury;
+
+    @JsonProperty("isFeatured")
     private boolean isFeatured;
+
+    @JsonProperty("isBestSeller")
     private boolean isBestSeller;
+
+    @JsonProperty("isNewArrival")
     private boolean isNewArrival;
 
     private double rating;
