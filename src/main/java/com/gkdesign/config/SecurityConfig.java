@@ -44,22 +44,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // Public read endpoints
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET,
-                        "/api/products/**", "/api/categories/**", "/api/homepage-sections/**",
-                        "/api/services/**", "/api/testimonials/**", "/api/settings/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/inquiries", "/api/newsletter/**").permitAll()
-                // Admin-only writes
-                .requestMatchers("/api/admin/**").hasAnyRole("SUPERADMIN", "ADMIN", "EDITOR")
-                .requestMatchers("/api/admin/settings/**", "/api/admin/users/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // Public read endpoints
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/products/**", "/api/categories/**", "/api/homepage-sections/**",
+                                "/api/services/**", "/api/testimonials/**", "/api/settings/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/inquiries", "/api/newsletter/**").permitAll()
+                        // Admin-only writes
+                        .requestMatchers("/api/admin/**").hasAnyRole("SUPERADMIN", "ADMIN", "EDITOR")
+                        .requestMatchers("/api/admin/settings/**", "/api/admin/users/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -70,6 +70,8 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
+        // Let browsers reuse successful CORS preflight responses for one hour.
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
