@@ -75,11 +75,20 @@ public class CategoryService {
         return categoryRepository.save(existing);
     }
 
-    public void softDeleteBySlug(String slug) {
-        Category category = categoryRepository.findBySlugAndDeletedAtIsNull(slug)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Category not found: " + slug
-                ));
+    public void softDeleteById(String id) {
+
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Category not found: " + id
+                        )
+                );
+
+        if (category.getDeletedAt() != null) {
+            throw new ResourceNotFoundException(
+                    "Category already deleted."
+            );
+        }
 
         category.setDeletedAt(Instant.now());
         categoryRepository.save(category);
