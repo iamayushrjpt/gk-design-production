@@ -10,4 +10,5 @@ public interface CategoryRepository extends MongoRepository<Category, String> {
     Optional<Category> findBySlugAndDeletedAtIsNull(String slug);
     List<Category> findByDeletedAtIsNullOrderByOrderAsc();
     List<Category> findByIsHiddenFalseAndDeletedAtIsNullOrderByOrderAsc();
+    List<Category> findAllBySlugAndDeletedAtIsNull(String slug);
 }

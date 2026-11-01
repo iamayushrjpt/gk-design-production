@@ -41,9 +41,9 @@ public class CategoryController {
         return ApiResponse.ok(categoryService.update(slug, request), "Category updated.");
     }
 
-    @DeleteMapping("/api/admin/categories/{slug}")
-    public ApiResponse<Void> delete(@PathVariable String slug) {
-        categoryService.softDelete(slug);
+    @DeleteMapping("/api/admin/categories/{id}")
+    public ApiResponse<Void> delete(@PathVariable String id) {
+        categoryService.softDeleteById(id);
         return ApiResponse.ok(null, "Category deleted.");
     }
 }
