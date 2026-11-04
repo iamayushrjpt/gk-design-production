@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 /**
  * Runs after DataSeeder (admin user). Each collection is seeded
  * independently and only if empty, so this is safe to leave in place
@@ -20,6 +20,11 @@ import java.util.Map;
 @Component
 @Order(2)
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "app.seed",
+        name = "enabled",
+        havingValue = "true"
+)
 public class ContentSeeder implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;

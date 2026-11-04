@@ -9,11 +9,17 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Slf4j
 @Component
 @Order(1)
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "app.seed",
+        name = "enabled",
+        havingValue = "true"
+)
 public class DataSeeder implements CommandLineRunner {
 
     private final AdminUserRepository adminUserRepository;
