@@ -50,6 +50,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public read endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                org.springframework.http.HttpMethod.GET,
+                                "/api/health"
+                        ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/products/**", "/api/categories/**", "/api/homepage-sections/**",
                                 "/api/services/**", "/api/testimonials/**", "/api/settings/**").permitAll()
