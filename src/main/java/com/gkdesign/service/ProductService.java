@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.Locale;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
@@ -27,17 +29,12 @@ public class ProductService {
     }
 
     public Product getBySlug(String slug) {
-        Product product = productRepository.findBySlugAndDeletedAtIsNull(slug)
-                .orElseThrow(() -> new ResourceNotFoundException("No product found with slug: " + slug));
-
-        // Hold/hidden/draft/archived products are invisible to public callers.
+        Product product = getBySlugForAdmin(slug);
         if (product.getStatus() != Product.ProductStatus.PUBLISHED) {
             throw new ResourceNotFoundException("No product found with slug: " + slug);
         }
-
         product.setViewCount(product.getViewCount() + 1);
-        productRepository.save(product);
-        return product;
+        return productRepository.save(product);
     }
 
     public Product getBySlugForAdmin(String slug) {
@@ -51,8 +48,7 @@ public class ProductService {
             throw new DuplicateResourceException("A product with SKU '" + request.getSku() + "' already exists.");
         }
 
-        String slug = slugify(request.getName());
-
+        String slug = uniqueSlug(slugify(request.getName()));
         Product product = Product.builder()
                 .slug(slug)
                 .sku(request.getSku())
@@ -87,14 +83,12 @@ public class ProductService {
                 .createdBy(adminEmail)
                 .updatedBy(adminEmail)
                 .build();
-
         return productRepository.save(product);
     }
 
     @Transactional
     public Product update(String slug, ProductRequest request, String adminEmail) {
         Product existing = getBySlugForAdmin(slug);
-
         existing.setName(request.getName());
         existing.setCategoryId(request.getCategoryId());
         existing.setCategory(request.getCategory());
@@ -121,7 +115,6 @@ public class ProductService {
         existing.setBestSeller(request.isBestSeller());
         existing.setNewArrival(request.isNewArrival());
         existing.setUpdatedBy(adminEmail);
-
         return productRepository.save(existing);
     }
 
@@ -136,10 +129,11 @@ public class ProductService {
     @Transactional
     public Product duplicate(String slug, String adminEmail) {
         Product original = getBySlugForAdmin(slug);
+        String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
         Product copy = original.toBuilder()
                 .id(null)
-                .slug(original.getSlug() + "-copy-" + System.currentTimeMillis())
-                .sku(original.getSku() + "-COPY")
+                .slug(uniqueSlug(original.getSlug() + "-copy"))
+                .sku(original.getSku() + "-COPY-" + suffix)
                 .name(original.getName() + " (Copy)")
                 .status(Product.ProductStatus.DRAFT)
                 .createdBy(adminEmail)
@@ -158,16 +152,27 @@ public class ProductService {
 
     @Transactional
     public Product restore(String slug) {
-        Product product = productRepository.findBySlugAndDeletedAtIsNull(slug)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found or not deleted: " + slug));
+        Product product = productRepository.findBySlugAndDeletedAtIsNotNull(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Deleted product not found: " + slug));
         product.setDeletedAt(null);
         product.setStatus(Product.ProductStatus.DRAFT);
         return productRepository.save(product);
     }
 
+    private String uniqueSlug(String baseSlug) {
+        String candidate = baseSlug;
+        int suffix = 2;
+        while (productRepository.existsBySlug(candidate)) {
+            candidate = baseSlug + "-" + suffix++;
+        }
+        return candidate;
+    }
+
     private String slugify(String input) {
         String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
-        String slug = Pattern.compile("[^\\w\\s-]").matcher(normalized).replaceAll("");
-        return slug.trim().toLowerCase().replaceAll("\\s+", "-");
+        String slug = Pattern.compile("[^\\w\\s-]")
+                .matcher(normalized)
+                .replaceAll("");
+        return slug.trim().toLowerCase(Locale.ROOT).replaceAll("\s+", "-");
     }
 }

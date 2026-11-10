@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Repository
 @RequiredArgsConstructor
@@ -22,17 +23,18 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
 
     @Override
     public Page<Product> search(ProductFilterRequest filter, Pageable pageable) {
-        List<Criteria> criteriaList = new ArrayList<>();
+        if (filter == null) filter = new ProductFilterRequest();
 
-        // Public callers never see soft-deleted docs; admin callers explicitly opt into all statuses.
+        List<Criteria> criteriaList = new ArrayList<>();
+        // MongoDB matches both explicit null and absent fields with is(null).
         criteriaList.add(Criteria.where("deletedAt").is(null));
 
-        if (filter.getIncludeAllStatuses() == null || !filter.getIncludeAllStatuses()) {
+        if (!Boolean.TRUE.equals(filter.getIncludeAllStatuses())) {
             criteriaList.add(Criteria.where("status").is(Product.ProductStatus.PUBLISHED));
         }
 
-        if (filter.getQuery() != null && !filter.getQuery().isBlank()) {
-            String regex = ".*" + java.util.regex.Pattern.quote(filter.getQuery().trim()) + ".*";
+        if (hasText(filter.getQuery())) {
+            String regex = ".*" + Pattern.quote(filter.getQuery().trim()) + ".*";
             criteriaList.add(new Criteria().orOperator(
                     Criteria.where("name").regex(regex, "i"),
                     Criteria.where("category").regex(regex, "i"),
@@ -43,17 +45,21 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             ));
         }
 
-        if (filter.getCategory() != null) {
-            criteriaList.add(Criteria.where("category").is(filter.getCategory()));
+        if (hasText(filter.getCategory())) {
+            criteriaList.add(Criteria.where("category").regex(
+                    "^" + Pattern.quote(filter.getCategory().trim()) + "$", "i"));
         }
-        if (filter.getMaterial() != null) {
-            criteriaList.add(Criteria.where("material").regex(filter.getMaterial(), "i"));
+        if (hasText(filter.getMaterial())) {
+            criteriaList.add(Criteria.where("material").regex(
+                    Pattern.quote(filter.getMaterial().trim()), "i"));
         }
-        if (filter.getBrand() != null) {
-            criteriaList.add(Criteria.where("brand").is(filter.getBrand()));
+        if (hasText(filter.getBrand())) {
+            criteriaList.add(Criteria.where("brand").regex(
+                    "^" + Pattern.quote(filter.getBrand().trim()) + "$", "i"));
         }
-        if (filter.getColor() != null) {
-            criteriaList.add(Criteria.where("colors.name").regex(filter.getColor(), "i"));
+        if (hasText(filter.getColor())) {
+            criteriaList.add(Criteria.where("colors.name").regex(
+                    Pattern.quote(filter.getColor().trim()), "i"));
         }
         if (filter.getMinPrice() != null || filter.getMaxPrice() != null) {
             Criteria priceCriteria = Criteria.where("price");
@@ -82,7 +88,22 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         long total = mongoTemplate.count(query, Product.class);
         query.with(pageable);
         List<Product> results = mongoTemplate.find(query, Product.class);
-
         return new PageImpl<>(results, pageable, total);
+    }
+
+    @Override
+    public long countPublishedByCategoryIgnoreCase(String category) {
+        if (!hasText(category)) return 0;
+        Query query = new Query();
+        query.addCriteria(new Criteria().andOperator(
+                Criteria.where("deletedAt").is(null),
+                Criteria.where("status").is(Product.ProductStatus.PUBLISHED),
+                Criteria.where("category").regex("^" + Pattern.quote(category.trim()) + "$", "i")
+        ));
+        return mongoTemplate.count(query, Product.class);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

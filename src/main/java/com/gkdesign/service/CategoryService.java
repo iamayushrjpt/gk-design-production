@@ -4,7 +4,6 @@ import com.gkdesign.dto.request.CategoryRequest;
 import com.gkdesign.exception.DuplicateResourceException;
 import com.gkdesign.exception.ResourceNotFoundException;
 import com.gkdesign.model.Category;
-import com.gkdesign.model.Product;
 import com.gkdesign.repository.CategoryRepository;
 import com.gkdesign.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +41,7 @@ public class CategoryService {
 
     public Category create(CategoryRequest request) {
         String slug = request.getSlug() != null && !request.getSlug().isBlank()
-                ? request.getSlug()
-                : slugify(request.getName());
+                ? slugify(request.getSlug()) : slugify(request.getName());
 
         if (categoryRepository.findBySlugAndDeletedAtIsNull(slug).isPresent()) {
             throw new DuplicateResourceException("A category with slug '" + slug + "' already exists.");
@@ -59,7 +57,6 @@ public class CategoryService {
                 .isHidden(request.isHidden())
                 .parentId(request.getParentId())
                 .build();
-
         return categoryRepository.save(category);
     }
 
@@ -76,35 +73,24 @@ public class CategoryService {
     }
 
     public void softDeleteById(String id) {
-
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Category not found: " + id
-                        )
-                );
-
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + id));
         if (category.getDeletedAt() != null) {
-            throw new ResourceNotFoundException(
-                    "Category already deleted."
-            );
+            throw new ResourceNotFoundException("Category already deleted.");
         }
-
         category.setDeletedAt(Instant.now());
         categoryRepository.save(category);
     }
 
-    /** Sets the transient `count` field from a live product count — never stored, so it can't go stale. */
     private Category withLiveCount(Category category) {
-        long count = productRepository.countByCategoryAndStatusAndDeletedAtIsNull(
-                category.getName(), Product.ProductStatus.PUBLISHED);
-        category.setCount((int) count);
+        category.setCount((int) productRepository.countPublishedByCategoryIgnoreCase(category.getName()));
         return category;
     }
 
     private String slugify(String input) {
         String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
-        String slug = Pattern.compile("[^\\w\\s-]").matcher(normalized).replaceAll("");
-        return slug.trim().toLowerCase().replaceAll("\\s+", "-");
+        String slug = Pattern.compile("[^\\w\\s-]")
+                .matcher(normalized)
+                .replaceAll("");        return slug.trim().toLowerCase().replaceAll("\s+", "-");
     }
 }
